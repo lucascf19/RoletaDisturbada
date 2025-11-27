@@ -49,10 +49,15 @@ const wheelColors = [
 
 // Carregar imagem do centro
 const centerImage = new Image();
-centerImage.src = 'img/1.png';
 centerImage.onerror = () => {
   console.warn('Imagem do centro não pôde ser carregada');
 };
+centerImage.onload = () => {
+  // Redesenhar a roleta quando a imagem carregar
+  drawWheel(state.currentRotation);
+};
+// Definir src depois dos listeners para garantir que onload seja chamado
+centerImage.src = 'img/1.png';
 
 // Variáveis de dimensão do canvas (definidas dinamicamente para evitar erros)
 function getCanvasDimensions() {
@@ -81,12 +86,14 @@ function drawWheel(rotationRad = 0){
   ctx.clearRect(0,0,W,H);
   ctx.save();
   ctx.translate(CX,CY);
+  
+  // Salvar estado após translação (para restaurar depois e desenhar centro fixo)
+  ctx.save();
   ctx.rotate(rotationRad);
   
   // Raio do círculo central e margem de segurança
   const centerRadius = 140;
-  const textMinRadius = centerRadius + 50; // Margem de 50px do círculo central
-  
+  const textMinRadius = centerRadius + 50;
   const slice = (2*Math.PI)/n;
   for(let i=0;i<n;i++){
     const start = i*slice;
@@ -94,7 +101,6 @@ function drawWheel(rotationRad = 0){
     ctx.moveTo(0,0);
     ctx.arc(0,0,RADIUS,start,start+slice);
     ctx.closePath();
-    // Usa as cores fixas, repetindo se necessário
     ctx.fillStyle = wheelColors[i % wheelColors.length];
     ctx.fill();
     // texto
@@ -148,20 +154,25 @@ function drawWheel(rotationRad = 0){
     
     ctx.restore();
   }
-  // center circle (aumentado) - centerRadius já definido acima
+  
+  // Desfazer apenas a rotação para desenhar o centro fixo (sem girar)
+  ctx.restore(); // Remove a rotação, mas mantém a translação (CX, CY) do save anterior
+  
+  // center circle (aumentado) - desenhar sem rotação
   ctx.beginPath(); ctx.arc(0,0,centerRadius,0,Math.PI*2); ctx.fillStyle='#F7C600'; ctx.fill();
   
-  // desenhar imagem no centro
+  // desenhar imagem no centro (sem rotação)
   if (centerImage.complete && centerImage.naturalWidth > 0) {
-    const imgSize = centerRadius * 1.6; // tamanho da imagem (um pouco menor que o círculo)
+    const imgSize = centerRadius * 1.6; 
     ctx.save();
     ctx.beginPath();
     ctx.arc(0, 0, centerRadius, 0, Math.PI * 2);
-    ctx.clip(); // recortar a imagem para ficar dentro do círculo
+    ctx.clip(); 
     ctx.drawImage(centerImage, -imgSize/2, -imgSize/2, imgSize, imgSize);
     ctx.restore();
   }
   
+  // Desfazer a translação final
   ctx.restore();
 }
 
@@ -211,7 +222,7 @@ function spinWheel(){
   state.isSpinning = true;
   spinBtn.disabled = true;
 
-  // escolher índice alvo aleatoriamente (poderia aplicar pesos)
+  // escolher índice alvo aleatoriamente 
   const w = getActiveWheel();
   if (!w) {
     alert('Erro: roda não encontrada.');
@@ -316,7 +327,7 @@ function startConfetti(){
       w: rand(6,12),
       h: rand(8,18),
       color: `hsl(${Math.floor(rand(0,360))} 90% 60%)`,
-      rot: rand(0,360),
+      rot: rand(0, 2*Math.PI), // Inicializar em radianos (0 a 2π)
       velY: rand(2,6),
       velX: rand(-2,2),
       spin: rand(-0.08,0.08)
@@ -446,19 +457,6 @@ function saveLocalRecord(record){
 spinBtn.addEventListener('click', spinWheel);
 closeModal.addEventListener('click', hideModal);
 modalOk.addEventListener('click', hideModal);
-
-// developer reset button (apenas para teste) - remove anti-repeat
-// Nota: resetBtn não existe no HTML, então este código está comentado
-// Se quiser adicionar, crie um botão com id="resetBtn" no HTML
-// const resetBtn = document.getElementById('resetBtn');
-// if (resetBtn) {
-//   resetBtn.addEventListener('click', ()=>{
-//     if(confirm('Resetar flag de anti-repetição neste dispositivo? (apenas dev)')){
-//       localStorage.removeItem('wheel_has_spun_v1');
-//       alert('Resetado.');
-//     }
-//   });
-// }
 
 // initial draw
 drawWheel(0);
