@@ -318,37 +318,112 @@ function showModal(name, prize){
   prizeTextEl.textContent = prize;
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden','false');
-  startConfetti();
-  // play sound optional (not included to keep autossuficiente)
+  
+  // Animação de entrada do modal
+  setTimeout(() => {
+    modal.classList.add('show');
+    
+    // Iniciar confetti explosivo após o modal estar visível
+    setTimeout(() => {
+      startConfetti();
+    }, 100);
+  }, 10);
+  
+  // Tocar música de celebração
+  playCelebrationSound();
 }
 
 function hideModal(){
-  modal.classList.add('hidden');
-  modal.setAttribute('aria-hidden','true');
-  stopConfetti();
+  modal.classList.remove('show');
+  setTimeout(() => {
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden','true');
+    stopConfetti();
+  }, 300);
 }
 
-// Confetti implementation (simples)
+// Função para tocar música de celebração simples
+function playCelebrationSound(){
+  try {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Criar uma melodia simples e alegre
+    const notes = [
+      {freq: 523.25, time: 0},   // C5
+      {freq: 659.25, time: 0.1}, // E5
+      {freq: 783.99, time: 0.2}, // G5
+      {freq: 1046.50, time: 0.3}, // C6
+      {freq: 783.99, time: 0.5}, // G5
+      {freq: 1046.50, time: 0.6}  // C6
+    ];
+    
+    notes.forEach(note => {
+      setTimeout(() => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = note.freq;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+      }, note.time * 1000);
+    });
+  } catch(e) {
+    // Se Web Audio API não estiver disponível, silenciosamente falhar
+    console.log('Áudio não disponível');
+  }
+}
+
+// Confetti implementation (melhorado com explosão)
 function rand(min,max){ return Math.random()*(max-min)+min; }
 function startConfetti(){
-  if (!confettiCanvas || !confettiCtx) return; // Verificação de segurança
-  confettiCanvas.width = confettiCanvas.clientWidth;
-  confettiCanvas.height = confettiCanvas.clientHeight;
+  if (!confettiCanvas || !confettiCtx) {
+    console.warn('Canvas de confetti não disponível');
+    return;
+  }
+  
+  // Garantir que o canvas tenha dimensões corretas
+  const rect = confettiCanvas.getBoundingClientRect();
+  const width = rect.width || confettiCanvas.clientWidth || 720;
+  const height = rect.height || confettiCanvas.clientHeight || 400;
+  
+  confettiCanvas.width = width;
+  confettiCanvas.height = height;
+  
+  // Limpar canvas
+  confettiCtx.clearRect(0, 0, width, height);
+  
   confettiPieces = [];
-  const count = 160;
+  
+  // Criar explosão de confetti do centro
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const count = 250; // Mais confetti para efeito mais impactante
+  
   for(let i=0;i<count;i++){
+    const angle = rand(0, 2*Math.PI);
+    const speed = rand(3, 12);
     confettiPieces.push({
-      x: rand(0,confettiCanvas.width),
-      y: rand(-confettiCanvas.height,0),
-      w: rand(6,12),
-      h: rand(8,18),
+      x: centerX,
+      y: centerY,
+      w: rand(6,14),
+      h: rand(8,20),
       color: `hsl(${Math.floor(rand(0,360))} 90% 60%)`,
-      rot: rand(0, 2*Math.PI), // Inicializar em radianos (0 a 2π)
-      velY: rand(2,6),
-      velX: rand(-2,2),
-      spin: rand(-0.08,0.08)
+      rot: rand(0, 2*Math.PI),
+      velY: Math.sin(angle) * speed,
+      velX: Math.cos(angle) * speed,
+      spin: rand(-0.12,0.12),
+      gravity: rand(0.02, 0.05)
     });
   }
+  
   confettiLoopActive = true;
   requestAnimationFrame(confettiLoop);
 }
@@ -364,25 +439,42 @@ function confettiLoop(){
     return;
   }
   confettiCtx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+  
+  // Filtrar peças que saíram da tela
+  confettiPieces = confettiPieces.filter(p => {
+    return p.y < confettiCanvas.height + 100 && 
+           p.x > -50 && 
+           p.x < confettiCanvas.width + 50;
+  });
+  
+  // Atualizar e desenhar cada peça
   confettiPieces.forEach(p=>{
     p.x += p.velX;
     p.y += p.velY;
     p.rot += p.spin;
-    p.velY += 0.03;
-    confettiCtx.save();
-    confettiCtx.translate(p.x, p.y);
-    confettiCtx.rotate(p.rot);
-    confettiCtx.fillStyle = p.color;
-    confettiCtx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
-    confettiCtx.restore();
+    p.velY += p.gravity || 0.03;
+    p.velX *= 0.98; // Resistência do ar
+    
+    // Desenhar apenas se estiver visível
+    if(p.x >= -100 && p.x <= confettiCanvas.width + 100 && 
+       p.y >= -100 && p.y <= confettiCanvas.height + 100) {
+      confettiCtx.save();
+      confettiCtx.translate(p.x, p.y);
+      confettiCtx.rotate(p.rot);
+      confettiCtx.fillStyle = p.color;
+      confettiCtx.shadowBlur = 4;
+      confettiCtx.shadowColor = p.color;
+      confettiCtx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      confettiCtx.restore();
+    }
   });
-  // remove out-of-screen occasionally
-  confettiPieces = confettiPieces.filter(p => p.y < confettiCanvas.height + 50);
-  if(confettiPieces.length < 30){
-    // keep a few going then stop after a while
-    // not adding more to allow a graceful stop
+  
+  // Continuar animação se houver peças ou se ainda estiver ativo
+  if(confettiPieces.length > 0 || confettiLoopActive) {
+    requestAnimationFrame(confettiLoop);
+  } else {
+    confettiLoopActive = false;
   }
-  requestAnimationFrame(confettiLoop);
 }
 
 // ---------- registrar no Google Sheets (via webhook) ----------
