@@ -56,7 +56,6 @@ centerImage.onload = () => {
   // Redesenhar a roleta quando a imagem carregar
   drawWheel(state.currentRotation);
 };
-// Definir src depois dos listeners para garantir que onload seja chamado
 centerImage.src = 'img/1.png';
 
 // Variáveis de dimensão do canvas (definidas dinamicamente para evitar erros)
@@ -154,11 +153,8 @@ function drawWheel(rotationRad = 0){
     
     ctx.restore();
   }
-  
-  // Desfazer apenas a rotação para desenhar o centro fixo (sem girar)
-  ctx.restore(); // Remove a rotação, mas mantém a translação (CX, CY) do save anterior
-  
-  // center circle (aumentado) - desenhar sem rotação
+    
+  ctx.restore();
   ctx.beginPath(); ctx.arc(0,0,centerRadius,0,Math.PI*2); ctx.fillStyle='#F7C600'; ctx.fill();
   
   // desenhar imagem no centro (sem rotação)
@@ -208,11 +204,11 @@ function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
 
 function spinWheel(){
   if(state.isSpinning) return;
-  // anti-repetição global (por dispositivo) - COMENTADO PARA TESTES
-  // if(localStorage.getItem('wheel_has_spun_v1')){
-  //   alert('Este dispositivo já realizou um giro. Anti-repetição ativada.');
-  //   return;
-  // }
+  
+  if(localStorage.getItem('wheel_has_spun_v1')){
+    alert('Este dispositivo já realizou um giro. Anti-repetição ativada.');
+    return;
+  }
   const name = nameInput.value.trim();
   if(!name){
     alert('Por favor, digite seu nome antes de girar.');
