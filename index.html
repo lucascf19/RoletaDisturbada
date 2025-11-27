@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+<meta charset="UTF-8">
+<title>Roleta de Prêmios</title>
+
+<link rel="stylesheet" href="styel.css">
+
+</head>
+
+<body>
+
+<h1>Roleta de Prêmios</h1>
+
+<input type="text" id="nome" placeholder="Digite seu nome" />
+
+<div id="seta"></div>
+<div id="roleta"></div>
+
+<button onclick="girar()">Girar Roleta</button>
+
+<div id="resultado"></div>
+
+<div id="modal-container" class="hidden">
+    <div id="modal">
+        <h2>🎉 Parabéns!</h2>
+        <p id="modal-premio"></p>
+        <button id="fechar-modal">OK</button>
+    </div>
+</div>
+
+<script src="index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</body>
+</html>
