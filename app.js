@@ -205,14 +205,34 @@ function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
 function spinWheel(){
   if(state.isSpinning) return;
   
-  if(localStorage.getItem('wheel_has_spun_v1')){
-    alert('Este dispositivo já realizou um giro. Anti-repetição ativada.');
-    return;
-  }
   const name = nameInput.value.trim();
   if(!name){
     alert('Por favor, digite seu nome antes de girar.');
     nameInput.focus();
+    return;
+  }
+  
+  // Verificar se o dispositivo já girou
+  const deviceSpin = localStorage.getItem('wheel_has_spun_v1');
+  if(deviceSpin){
+    const spinData = JSON.parse(deviceSpin);
+    // Verificar se é o mesmo nome tentando girar novamente
+    if(spinData.name && spinData.name.toLowerCase() === name.toLowerCase()){
+      alert('Este nome já realizou um giro. Anti-repetição ativada.');
+      return;
+    }
+    // Verificar se o dispositivo já girou (mesmo com nome diferente)
+    alert('Este dispositivo já realizou um giro. Anti-repetição ativada.');
+    return;
+  }
+  
+  // Verificar se o nome já girou (mesmo em outro dispositivo)
+  const allSpins = JSON.parse(localStorage.getItem('wheel_spins_local_v1') || '[]');
+  const nameAlreadySpun = allSpins.some(spin => 
+    spin.name && spin.name.toLowerCase() === name.toLowerCase()
+  );
+  if(nameAlreadySpun){
+    alert('Este nome já realizou um giro. Anti-repetição ativada.');
     return;
   }
   state.isSpinning = true;
@@ -272,14 +292,14 @@ function spinWheel(){
       const prize = w.entries[landedIdx];
       const winnerName = name;
       lastResult.textContent = `Resultado: ${prize} — ${winnerName}`;
-      // mark device as used - COMENTADO PARA TESTES
-      // localStorage.setItem('wheel_has_spun_v1', JSON.stringify({
-      //   id: uid(),
-      //   name: winnerName,
-      //   time: (new Date()).toISOString(),
-      //   wheel: w.title,
-      //   prize
-      // }));
+      // Marcar dispositivo e nome como usados
+      localStorage.setItem('wheel_has_spun_v1', JSON.stringify({
+        id: uid(),
+        name: winnerName,
+        time: (new Date()).toISOString(),
+        wheel: w.title,
+        prize
+      }));
       // registrar no Google Sheets (se URL fornecida)
       recordSpin({name: winnerName, prize, wheel: w.title});
       // abrir modal e confete
