@@ -251,17 +251,17 @@ function spinWheel(){
       // finalizado
       state.isSpinning = false;
       spinBtn.disabled = false;
-      // A seta aponta para cima (topo = -90 graus ou 270 graus)
-      // Precisamos calcular qual fatia está no topo após a rotação
+      // A seta está no topo apontando para baixo (posição 270 graus ou -90 graus)
+      // Precisamos calcular qual fatia está nessa posição após a rotação
       const rotationDeg = (state.currentRotation * 180/Math.PI) % 360;
-      // A seta aponta para -90 graus (topo), então precisamos ajustar
-      // A rotação é no sentido horário, então subtraímos a rotação de 90 graus
-      const pointerAngle = (90 - rotationDeg + 360) % 360;
-      // Calcular qual fatia está nesse ângulo
+      // A seta aponta para 270 graus (topo). Se a roleta rotacionou rotationDeg graus,
+      // então a fatia que estava em (270 - rotationDeg) agora está no topo
+      // Normalizar para 0-360
+      const originalAngle = (270 - rotationDeg + 360) % 360;
+      // Calcular qual fatia contém esse ângulo
       // As fatias começam em 0 graus (direita) e vão no sentido horário
-      let landedIdx = Math.floor(pointerAngle / sliceDeg) % n;
-      // Ajustar para o índice correto (as fatias são numeradas de 0 a n-1)
-      landedIdx = (n - landedIdx) % n;
+      // Fatia i vai de (i * sliceDeg) até ((i+1) * sliceDeg)
+      let landedIdx = Math.floor(originalAngle / sliceDeg) % n;
       const prize = w.entries[landedIdx];
       const winnerName = name;
       lastResult.textContent = `Resultado: ${prize} — ${winnerName}`;
@@ -283,7 +283,7 @@ function spinWheel(){
 }
 
 // ---------- Modal + confetti ----------
-const confettiCtx = confettiCanvas.getContext('2d');
+const confettiCtx = confettiCanvas ? confettiCanvas.getContext('2d') : null;
 let confettiPieces = [];
 
 function showModal(name, prize){
@@ -304,6 +304,7 @@ function hideModal(){
 // Confetti implementation (simples)
 function rand(min,max){ return Math.random()*(max-min)+min; }
 function startConfetti(){
+  if (!confettiCanvas || !confettiCtx) return; // Verificação de segurança
   confettiCanvas.width = confettiCanvas.clientWidth;
   confettiCanvas.height = confettiCanvas.clientHeight;
   confettiPieces = [];
@@ -327,7 +328,14 @@ function startConfetti(){
 function stopConfetti(){ confettiLoopActive = false; }
 let confettiLoopActive = false;
 function confettiLoop(){
-  if(!confettiLoopActive) return confettiCtx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+  if (!confettiCtx || !confettiCanvas) {
+    confettiLoopActive = false;
+    return;
+  }
+  if(!confettiLoopActive) {
+    confettiCtx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+    return;
+  }
   confettiCtx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
   confettiPieces.forEach(p=>{
     p.x += p.velX;
